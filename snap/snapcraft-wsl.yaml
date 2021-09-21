@@ -1,0 +1,142 @@
+name: ubuntu-wsl-setup
+version: git
+summary: Ubuntu WSL Installer and Configuration
+description: |
+  This project is a modern implementation of the Ubuntu WSL installer,
+  based on the Ubuntu Desktop installer, using subiquity as a backendxi
+  and Flutter for the UI.
+grade: stable
+confinement: classic
+base: core20
+
+architectures:
+  - build-on: amd64
+
+apps:
+  ubuntu-wsl-setup:
+    command: bin/ubuntu_wsl_setup
+    desktop: bin/data/flutter_assets/assets/ubuntu-wsl-setup.desktop
+    environment:
+      PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
+      LIBGL_DRIVERS_PATH: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri
+      GIO_MODULE_DIR: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gio/modules
+      LIVE_RUN: 1
+
+parts:
+  subiquitydeps:
+    plugin: nil
+    stage-packages:
+      - iso-codes
+      - lsb-release
+      - ssh-import-id
+      - python3-aiohttp
+      - python3-bson
+      - python3-minimal
+      - python3.8-minimal
+      - libpython3-stdlib
+      - libpython3.8-stdlib
+      - libpython3.8-minimal
+      - python3-apport
+      - python3-requests-unixsocket
+      - python3-pyudev
+      - python3-systemd
+      - python3-urwid
+    prime:
+      - -lib/systemd/system/*
+
+  ubuntu-wsl-setup:
+    source: .
+    source-type: git
+    plugin: nil
+    build-environment:
+      - C_INCLUDE_PATH: /snap/flutter/current/usr/include
+      - LD_LIBRARY_PATH: $LD_LIBRARY_PATH:/snap/flutter/current/usr/lib/$SNAPCRAFT_ARCH_TRIPLET
+      - PKG_CONFIG_PATH: $PKG_CONFIG_PATH:/snap/flutter/current/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pkgconfig
+      - XDG_DATA_DIRS: /snap/flutter/current/usr/share:$XDG_DATA_DIRS
+    override-build: |
+      set -eux
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin/lib
+      cp snap/local/subiquity-server $SNAPCRAFT_PART_INSTALL/bin/
+      cp -r packages/subiquity_client/subiquity $SNAPCRAFT_PART_INSTALL/bin/
+      cd packages/ubuntu_wsl_setup
+      flutter channel stable
+      flutter upgrade
+      flutter config --enable-linux-desktop
+      flutter doctor
+      flutter pub get
+      flutter build linux --release -v
+      cp -r build/linux/x64/release/bundle/* $SNAPCRAFT_PART_INSTALL/bin/
+    build-snaps:
+      - flutter/latest/stable
+
+  libraries:
+    plugin: nil
+    stage-packages:
+      - libatk1.0-0
+      - libcairo-gobject2
+      - libcairo2
+      - libegl-mesa0
+      - libegl1
+      - libgl1
+      - libglib2.0-0
+      - libglib2.0-dev
+      - libgtk-3-0
+      - libpango-1.0-0
+      - libpangocairo-1.0-0
+      - libpng16-16
+      - libwayland-egl1
+      - libx11-6
+      - libdatrie1
+      - libdrm2
+      - libgbm1
+      - libglapi-mesa
+      - libgraphite2-3
+      - libxshmfence1
+      - libllvm10
+      - libpciaccess0
+      - libvulkan1
+      - shared-mime-info
+    prime:
+      - usr/lib/*/libEGL*.so.*
+      - usr/lib/*/libGL*.so.*
+      - usr/lib/*/libX*.so.*
+      - usr/lib/*/liba*.so.*
+      - usr/lib/*/libcairo*.so.*
+      - usr/lib/*/libe*.so.*
+      - usr/lib/*/libf*.so.*
+      - usr/lib/*/libg*.so.*
+      - usr/lib/*/libharfbuzz*.so.*
+      - usr/lib/*/libpango*.so.*
+      - usr/lib/*/libpixman*.so.*
+      - usr/lib/*/libpng*.so.*
+      - usr/lib/*/libthai*.so.*
+      - usr/lib/*/libwayland*.so.*
+      - usr/lib/*/libxcb*.so.*
+      - usr/lib/*/libxkb*.so.*
+      - usr/lib/*/libdatrie*.so.*
+      - usr/lib/*/libdrm*.so.*
+      - usr/lib/*/libgbm*.so.*
+      - usr/lib/*/libglapi*.so.*
+      - usr/lib/*/libgraphite2*.so.*
+      - usr/lib/*/libxshmfence*.so.*
+      - usr/lib/*/libLLVM-10.so.*
+      - usr/lib/*/libpciaccess*.so.*
+      - usr/lib/*/libsensors*.so.*
+      - usr/lib/*/libvulkan*.so.*
+      - usr/share/glvnd/egl_vendor.d
+      - usr/lib/*/gdk-pixbuf-2.0
+      - usr/lib/*/
+      - usr/bin/update-mime-database
+      - usr/bin/gdk*
+      - usr/share/mime
+
+  dri-no-patchelf:
+    after: [libraries]
+    plugin: nil
+    stage-packages:
+      - libgl1-mesa-dri
+    build-attributes:
+      - no-patchelf # Otherwise snapcraft may strip the build ID and cause the driver to crash
+    stage:
+      - usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+      - usr/share/drirc.d

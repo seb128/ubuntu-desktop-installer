@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Setup WSL
+Comment=Setup your WSL distribution
+Keywords=ubiquity;
+Exec=ubuntu-wsl-setup
+Icon=ubiquity
+Terminal=false
+Categories=GTK;System;Settings;
